@@ -32,7 +32,17 @@ def create_app():
     
 
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+
+database_path = os.getenv("DATABASE_PATH", "stockflow.db")
+
+if database_path != "stockflow.db":
+    os.makedirs(os.path.dirname(database_path), exist_ok=True)
+    app.config["SQLALCHEMY_DATABASE_URI"] = (
+        "sqlite:///" + database_path
+    )
+else:
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///stockflow.db"
+
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     csrf = CSRFProtect(app)
     db.init_app(app)
