@@ -1,0 +1,23 @@
+
+# Python virtual environment
+venv/
+env/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables and secrets
+.env
+
+# SQLite database
+instance/*.db
+*.sqlite
+*.sqlite3
+
+# macOS files
+.DS_Store
+
+# VS Code settings
+.vscode/
