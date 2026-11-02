@@ -1,4 +1,6 @@
-
+from flask_wtf.csrf import CSRFProtect
+from dotenv import load_dotenv
+import os
 from flask import (
     Flask,
     render_template,
@@ -26,11 +28,13 @@ login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
+    load_dotenv()
+    
 
-    app.config["SECRET_KEY"] = "stockflow-development-secret"
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///stockflow.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
+    csrf = CSRFProtect(app)
     db.init_app(app)
     login_manager.init_app(app)
 
