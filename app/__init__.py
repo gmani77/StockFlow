@@ -1,6 +1,8 @@
+
 from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
 import os
+
 from flask import (
     Flask,
     render_template,
@@ -9,7 +11,9 @@ from flask import (
     url_for,
     flash
 )
+
 from flask_sqlalchemy import SQLAlchemy
+
 from flask_login import (
     LoginManager,
     login_user,
@@ -17,10 +21,12 @@ from flask_login import (
     login_required,
     current_user
 )
+
 from werkzeug.security import (
     generate_password_hash,
     check_password_hash
 )
+
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -28,23 +34,30 @@ login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
+
     load_dotenv()
-    
 
-    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+    # ---------------- CONFIGURATION ----------------
 
-database_path = os.getenv("DATABASE_PATH", "stockflow.db")
+    secret_key = os.getenv("SECRET_KEY")
 
-if database_path != "stockflow.db":
-    os.makedirs(os.path.dirname(database_path), exist_ok=True)
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        "sqlite:///" + database_path
-    )
-else:
+    if not secret_key:
+        raise RuntimeError("SECRET_KEY environment variable is missing.")
+
+    app.config["SECRET_KEY"] = secret_key
+
+    # Use the default SQLite database.
+    # This avoids the unavailable /var/data directory on Render free plan.
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///stockflow.db"
 
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    csrf = CSRFProtect(app)
+
+    # ---------------- SECURITY ----------------
+
+    CSRFProtect(app)
+
+    # ---------------- INITIALIZE EXTENSIONS ----------------
+
     db.init_app(app)
     login_manager.init_app(app)
 
@@ -52,9 +65,13 @@ else:
 
     from app.modules.models import User, Organization, Product
 
+    # ---------------- USER LOADER ----------------
+
     @login_manager.user_loader
     def load_user(user_id):
         return db.session.get(User, int(user_id))
+
+    # ---------------- HOME ----------------
 
     @app.route("/")
     def home():
@@ -69,6 +86,7 @@ else:
     @app.route("/signup", methods=["GET", "POST"])
     def signup():
         if request.method == "POST":
+
             organization_name = request.form.get(
                 "organization_name", ""
             ).strip()
@@ -128,6 +146,7 @@ else:
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "POST":
+
             email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
 
@@ -141,9 +160,11 @@ else:
                 return redirect(url_for("dashboard"))
 
             flash("Invalid email or password.", "danger")
+
             return redirect(url_for("login"))
 
         return render_template("login.html")
+
     # ---------------- LOGOUT ----------------
 
     @app.route("/logout")
@@ -154,11 +175,13 @@ else:
         flash("You have been logged out successfully.", "success")
 
         return redirect(url_for("login"))
+
     # ---------------- DASHBOARD ----------------
 
     @app.route("/dashboard")
     @login_required
     def dashboard():
+
         products = Product.query.filter_by(
             organization_id=current_user.organization_id
         ).all()
@@ -194,6 +217,7 @@ else:
     @app.route("/products")
     @login_required
     def products_page():
+
         search = request.args.get("search", "").strip()
 
         query = Product.query.filter_by(
@@ -223,7 +247,9 @@ else:
     @app.route("/products/add", methods=["GET", "POST"])
     @login_required
     def add_product():
+
         if request.method == "POST":
+
             name = request.form.get("name", "").strip()
             sku = request.form.get("sku", "").strip()
             description = request.form.get("description", "").strip()
@@ -233,11 +259,13 @@ else:
 
                 cost_price = request.form.get("cost_price") or None
                 selling_price = request.form.get("selling_price") or None
+
                 low_stock_threshold = (
                     request.form.get("low_stock_threshold") or None
                 )
 
                 cost_price = float(cost_price) if cost_price else None
+
                 selling_price = (
                     float(selling_price) if selling_price else None
                 )
@@ -310,12 +338,14 @@ else:
     )
     @login_required
     def edit_product(product_id):
+
         product = Product.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
         ).first_or_404()
 
         if request.method == "POST":
+
             name = request.form.get("name", "").strip()
             sku = request.form.get("sku", "").strip()
             description = request.form.get("description", "").strip()
@@ -344,7 +374,10 @@ else:
             try:
                 quantity = int(request.form.get("quantity", 0))
 
-                cost_price = request.form.get("cost_price", "").strip()
+                cost_price = request.form.get(
+                    "cost_price", ""
+                ).strip()
+
                 selling_price = request.form.get(
                     "selling_price", ""
                 ).strip()
@@ -354,9 +387,11 @@ else:
                 ).strip()
 
                 cost_price = float(cost_price) if cost_price else None
+
                 selling_price = (
                     float(selling_price) if selling_price else None
                 )
+
                 threshold = int(threshold) if threshold else None
 
                 if (
@@ -416,6 +451,7 @@ else:
     )
     @login_required
     def delete_product(product_id):
+
         product = Product.query.filter_by(
             id=product_id,
             organization_id=current_user.organization_id
@@ -430,7 +466,7 @@ else:
 
     # ---------------- CREATE DATABASE TABLES ----------------
 
-        with app.app_context():
-            db.create_all()
+    with app.app_context():
+        db.create_all()
 
-        return app
+    return app
